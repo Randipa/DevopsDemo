@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Smoke check
+        run: npm run lint
+
+      - name: Build Docker image
+        run: docker build -t devops-demo:${{ github.sha }} .
+
+      - name: Validate container health
+        run: |
+          docker run -d --name ci-validate -p 9090:3000 devops-demo:${{ github.sha }}
+          sleep 5
+          curl -sf http://localhost:9090/health
+          curl -sf http://localhost:9090/metrics | head -5
+          docker rm -f ci-validate

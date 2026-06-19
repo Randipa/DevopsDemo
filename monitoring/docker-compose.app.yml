@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: devops-demo:latest
+    container_name: devops-demo-app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      APP_VERSION: local
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    external: true
+    name: monitoring-net

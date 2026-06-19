@@ -1,0 +1,36 @@
+# Build
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+.vs/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Secrets
+.env
+*.pem
+*.key
+appsettings.Production.json
+appsettings.Local.json
+
+# Docker
+.docker/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jenkins / CI artifacts
+artifacts/
+coverage/
+test-results/
