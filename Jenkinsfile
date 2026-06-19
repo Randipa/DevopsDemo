@@ -111,16 +111,25 @@ pipeline {
             steps {
                 script {
                     if (!env.K8S_SSH_HOST?.trim()) {
-                        echo 'K8S_SSH_HOST not set — skipping remote K8s deploy.'
-                        echo 'Set Jenkins credential/env: K8S_SSH_HOST=ec2-user@<k3s-node-ip>'
+                        echo 'K8S_SSH_HOST not set — skipping AWS deploy.'
+                        echo 'Setup guide: docs/AWS-AUTO-DEPLOY.md'
                         return
                     }
                 }
                 sh '''
-                    docker save ${DOCKER_IMAGE} | ssh -o StrictHostKeyChecking=no ${K8S_SSH_HOST} 'sudo k3s ctr images import -'
-                    export KUBECONFIG=${KUBECONFIG:-$HOME/.kube/dev-config}
+                    SSH_OPTS="-o StrictHostKeyChecking=no -o BatchMode=yes"
+                    if [ -n "${SSH_KEY_PATH:-}" ] && [ -f "${SSH_KEY_PATH}" ]; then
+                      SSH_OPTS="${SSH_OPTS} -i ${SSH_KEY_PATH}"
+                    fi
+
+                    docker save ${DOCKER_IMAGE} | ssh ${SSH_OPTS} ${K8S_SSH_HOST} 'sudo k3s ctr images import -'
+                    ssh ${SSH_OPTS} ${K8S_SSH_HOST} "sudo k3s ctr images tag ${DOCKER_IMAGE} ${APP_NAME}:latest"
+
+                    export KUBECONFIG=${KUBECONFIG:-/root/.kube/dev-config}
                     chmod +x scripts/deploy-k8s.sh
-                    IMAGE=${DOCKER_IMAGE} REMOTE=${K8S_SSH_HOST} ./scripts/deploy-k8s.sh
+                    IMAGE=${APP_NAME}:latest ./scripts/deploy-k8s.sh
+
+                    echo "Deployed ${DOCKER_IMAGE} to AWS dev environment"
                 '''
             }
         }

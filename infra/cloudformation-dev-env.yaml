@@ -87,6 +87,18 @@ Resources:
         - Key: Name
           Value: devops-dev-nacl
 
+  NaclInboundSsh:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicNacl
+      RuleNumber: 90
+      Protocol: 6
+      RuleAction: allow
+      CidrBlock: !Ref AdminCidr
+      PortRange:
+        From: 22
+        To: 22
+
   NaclInboundHttp:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
@@ -98,6 +110,18 @@ Resources:
       PortRange:
         From: 80
         To: 80
+
+  NaclInboundNodePort:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicNacl
+      RuleNumber: 105
+      Protocol: 6
+      RuleAction: allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 30080
+        To: 30080
 
   NaclInboundHttps:
     Type: AWS::EC2::NetworkAclEntry
@@ -251,6 +275,16 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Policies:
+        - PolicyName: RegisterWithTargetGroup
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:RegisterTargets
+                  - elasticloadbalancing:DeregisterTargets
+                Resource: !Ref TargetGroup
 
   K8sNodeProfile:
     Type: AWS::IAM::InstanceProfile
@@ -269,29 +303,29 @@ Resources:
       SecurityGroupIds:
         - !Ref K8sNodeSecurityGroup
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          set -euo pipefail
-          dnf update -y
-          dnf install -y docker git
-          systemctl enable docker
-          systemctl start docker
-          curl -sfL https://get.k3s.io | sh -
-          mkdir -p /home/ec2-user/.kube
-          cp /etc/rancher/k3s/k3s.yaml /home/ec2-user/.kube/config
-          chown -R ec2-user:ec2-user /home/ec2-user/.kube
-          mkdir -p /opt/devops-demo
-          chown ec2-user:ec2-user /opt/devops-demo
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            set -euo pipefail
+            dnf update -y
+            dnf install -y docker git aws-cli
+            systemctl enable docker
+            systemctl start docker
+            curl -sfL https://get.k3s.io | sh -
+            mkdir -p /home/ec2-user/.kube
+            cp /etc/rancher/k3s/k3s.yaml /home/ec2-user/.kube/config
+            chown -R ec2-user:ec2-user /home/ec2-user/.kube
+            mkdir -p /opt/devops-demo
+            chown ec2-user:ec2-user /opt/devops-demo
+            INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+            aws elbv2 register-targets \
+              --target-group-arn ${TargetGroupArn} \
+              --targets Id=$INSTANCE_ID,Port=30080 \
+              --region ${AWS::Region}
+          - TargetGroupArn: !Ref TargetGroup
       Tags:
         - Key: Name
           Value: devops-k3s-node
-
-  TargetGroupAttachment:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
-    Properties:
-      TargetGroupArn: !Ref TargetGroup
-      TargetId: !Ref K8sNodeInstance
-      Port: 30080
 
 Outputs:
   LoadBalancerDNS:

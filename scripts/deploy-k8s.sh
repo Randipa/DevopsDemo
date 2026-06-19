@@ -21,6 +21,10 @@ kubectl apply -f k8s/service-nodeport.yaml
 kubectl apply -f k8s/ingress.yaml
 kubectl apply -f k8s/hpa.yaml
 
+if [[ -n "${IMAGE}" ]]; then
+  kubectl -n "${NAMESPACE}" set image deployment/devops-demo app="${IMAGE}"
+fi
+
 kubectl -n "${NAMESPACE}" rollout status deployment/devops-demo --timeout=120s
 kubectl -n "${NAMESPACE}" get pods,svc,ingress,hpa
 

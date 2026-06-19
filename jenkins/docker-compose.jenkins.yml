@@ -9,10 +9,13 @@ services:
       - "50000:50000"
     environment:
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+      KUBECONFIG: /root/.kube/dev-config
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - ..:/workspace
+      - ${HOME}/.ssh:/root/.ssh:ro
+      - ${HOME}/.kube:/root/.kube:ro
     restart: unless-stopped
 
 volumes:
