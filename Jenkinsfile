@@ -64,15 +64,26 @@ pipeline {
             steps {
                 sh '''
                     docker rm -f jenkins-validate 2>/dev/null || true
-                    docker run -d --name jenkins-validate -p 9090:3000 \
+                    docker run -d --name jenkins-validate \
                       -e NODE_ENV=test \
                       -e APP_VERSION=${BUILD_NUMBER} \
                       ${DOCKER_IMAGE}
 
-                    sleep 5
-                    curl -sf http://localhost:9090/health
-                    curl -sf http://localhost:9090/api/info
-                    curl -sf http://localhost:9090/metrics | head -20
+                    for i in 1 2 3 4 5 6 7 8 9 10; do
+                      if docker exec jenkins-validate wget -qO- http://127.0.0.1:3000/health; then
+                        echo "Health check passed on attempt ${i}"
+                        break
+                      fi
+                      if [ "${i}" -eq 10 ]; then
+                        echo "Health check failed after 10 attempts"
+                        docker logs jenkins-validate
+                        exit 1
+                      fi
+                      sleep 2
+                    done
+
+                    docker exec jenkins-validate wget -qO- http://127.0.0.1:3000/api/info
+                    docker exec jenkins-validate wget -qO- http://127.0.0.1:3000/metrics | head -20
 
                     docker stop jenkins-validate
                     docker rm jenkins-validate
