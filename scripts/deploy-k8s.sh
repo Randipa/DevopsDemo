@@ -14,12 +14,23 @@ fi
 export KUBECONFIG
 
 echo "Applying Kubernetes manifests..."
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/service-nodeport.yaml
-kubectl apply -f k8s/ingress.yaml
-kubectl apply -f k8s/hpa.yaml
+MANIFESTS=(
+  k8s/namespace.yaml
+  k8s/deployment.yaml
+  k8s/service.yaml
+  k8s/service-nodeport.yaml
+  k8s/ingress.yaml
+  k8s/hpa.yaml
+)
+
+for manifest in "${MANIFESTS[@]}"; do
+  if [[ -n "${REMOTE:-}" ]]; then
+    ssh -i "${SSH_KEY_PATH:-$HOME/.ssh/devops-demo-key.pem}" "${REMOTE}" \
+      "sudo k3s kubectl apply -f -" < "${manifest}"
+  else
+    kubectl apply -f "${manifest}"
+  fi
+done
 
 if [[ -n "${IMAGE}" ]]; then
   kubectl -n "${NAMESPACE}" set image deployment/devops-demo app="${IMAGE}"
