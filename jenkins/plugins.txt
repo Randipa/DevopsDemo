@@ -1,0 +1,37 @@
+import jenkins.model.*
+import hudson.model.*
+import jenkins.install.*
+
+def instance = Jenkins.getInstance()
+
+// Skip setup wizard on first run
+if (!instance.getInstallState().isSetupComplete()) {
+  InstallUtil.saveLastExecVersion()
+}
+
+// Install commonly used plugins (IDs from Jenkins update center)
+def plugins = [
+  'workflow-aggregator',   // Pipeline suite
+  'git',
+  'github',
+  'github-branch-source',
+  'docker-workflow',
+  'timestamper',
+  'ws-cleanup',
+  'pipeline-stage-view',
+  'blueocean'
+]
+
+def pm = instance.getPluginManager()
+def uc = instance.getUpdateCenter()
+
+plugins.each { id ->
+  if (!pm.getPlugin(id)) {
+    def plugin = uc.getPlugin(id)
+    if (plugin != null) {
+      plugin.deploy()
+    }
+  }
+}
+
+instance.save()
