@@ -59,6 +59,12 @@ app.get('/api/echo', (req, res) => {
   });
 });
 
+app.get('/api/name', (req, res) => {
+  res.json({
+    name: req.query.name || 'DevOps demo'
+  });
+});
+
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
