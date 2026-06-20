@@ -10,7 +10,19 @@
 | AWS deploy | ECS Fargate + ECR + ALB × 4 envs |
 | Logs | CloudWatch (`/ecs/devops-demo-*`) |
 
-**Sinhala guide:** `../Note/industry.html`
+**Sinhala guide:** `../Note/industry.html`  
+**Bitbucket Pipelines (company interview):** `docs/BITBUCKET-PIPELINE-GUIDE.md`
+
+---
+
+## CI/CD platforms (same AWS backend)
+
+| Platform | Config file | Use case |
+|----------|-------------|----------|
+| **GitHub Actions** | `.github/workflows/*.yml` | Current repo (Randipa/DevopsDemo) |
+| **Bitbucket Pipelines** | `bitbucket-pipelines.yml` | Company uses Bitbucket — see guide |
+
+Both deploy to the same 4 ECS environments (Dev auto, Test/Stage/Prod manual).
 
 ---
 
