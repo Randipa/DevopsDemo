@@ -6,6 +6,8 @@ on:
 
 env:
   AWS_REGION: eu-north-1
+  STACK_NAME: devops-ecs-simple
+  APP_NAME: devops-demo
   ECR_REPOSITORY: devops-demo
   ECS_CLUSTER: devops-demo-cluster
   ECS_SERVICE: devops-demo-service
@@ -23,6 +25,21 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure AWS infrastructure (ECR + ECS + ALB)
+        run: |
+          aws cloudformation deploy \
+            --region "${AWS_REGION}" \
+            --template-file infra/cloudformation-ecs-simple.yaml \
+            --stack-name "${STACK_NAME}" \
+            --parameter-overrides AppName="${APP_NAME}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
+          aws cloudformation describe-stacks \
+            --region "${AWS_REGION}" \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].Outputs' \
+            --output table
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -63,3 +80,12 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+      - name: Print app URL
+        run: |
+          ALB=$(aws cloudformation describe-stacks \
+            --region "${AWS_REGION}" \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
+            --output text)
+          echo "App URL: http://${ALB}/health"
