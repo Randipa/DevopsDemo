@@ -1,0 +1,33 @@
+name: Delete AWS Cloud Stack
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-north-1
+  STACK_NAME: devops-ecs-simple
+
+jobs:
+  delete-cloud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Delete CloudFormation stack
+        run: |
+          aws cloudformation delete-stack \
+            --region "${AWS_REGION}" \
+            --stack-name "${STACK_NAME}" || true
+          echo "Deleting stack ${STACK_NAME}. Check AWS Console for DELETE_COMPLETE."
+
+      - name: Also delete old k3s stack if exists
+        run: |
+          aws cloudformation delete-stack \
+            --region "${AWS_REGION}" \
+            --stack-name devops-dev-env || true
+          echo "If devops-dev-env existed, it is also being deleted."
