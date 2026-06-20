@@ -13,6 +13,11 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    triggers {
+        // Poll GitHub every 2 minutes — auto-build after push (no public URL needed)
+        pollSCM('H/2 * * * *')
+    }
+
     stages {
         stage('Checkout from GitHub') {
             steps {
@@ -99,8 +104,8 @@ pipeline {
             Pipeline SUCCESS
             Build: ${BUILD_NUMBER}
             Image: ${DOCKER_IMAGE}
-            AWS deploy: push to main → GitHub Actions (ECS)
-            Blue Ocean: http://localhost:8080/blue
+            AWS deploy: push to main → GitHub Actions (Development + Stage auto)
+            Jenkins: auto trigger via pollSCM (~2 min after push)
             """
         }
         failure {
