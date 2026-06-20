@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - testing
+          - stage
           - production
       image_tag:
         description: ECR image tag to deploy (default = last dev build)
@@ -30,6 +31,10 @@ jobs:
             testing)
               echo "env_key=test" >> "$GITHUB_OUTPUT"
               echo "github_environment=testing" >> "$GITHUB_OUTPUT"
+              ;;
+            stage)
+              echo "env_key=stage" >> "$GITHUB_OUTPUT"
+              echo "github_environment=stage" >> "$GITHUB_OUTPUT"
               ;;
             production)
               echo "env_key=prod" >> "$GITHUB_OUTPUT"

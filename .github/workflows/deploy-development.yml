@@ -1,24 +1,14 @@
-name: Deploy to Development and Stage
+name: Deploy to Development
 
 on:
   push:
     branches: [main]
 
 jobs:
-  deploy-development:
+  deploy:
     uses: ./.github/workflows/ecs-deploy-reusable.yml
     with:
       github_environment: development
       env_key: dev
       build_image: true
-    secrets: inherit
-
-  deploy-stage:
-    needs: deploy-development
-    uses: ./.github/workflows/ecs-deploy-reusable.yml
-    with:
-      github_environment: stage
-      env_key: stage
-      build_image: false
-      image_tag: dev-latest
     secrets: inherit
