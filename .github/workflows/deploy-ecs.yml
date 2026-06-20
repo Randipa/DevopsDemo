@@ -35,9 +35,16 @@ jobs:
             --stack-name "${STACK_NAME}" \
             --query 'Stacks[0].StackStatus' \
             --output text 2>/dev/null)
-          if [[ "${STATUS}" == "ROLLBACK_COMPLETE" ]] || [[ "${STATUS}" == "CREATE_FAILED" ]]; then
-            echo "Stack in failed state (${STATUS}). Delete it in AWS Console first:"
-            echo "  CloudFormation → ${STACK_NAME} → Delete"
+          if [[ "${STATUS}" == "ROLLBACK_COMPLETE" ]] || [[ "${STATUS}" == "ROLLBACK_FAILED" ]] || [[ "${STATUS}" == "CREATE_FAILED" ]]; then
+            echo "Stack in failed state (${STATUS})."
+            echo "AWS Console → CloudFormation → devops-ecs-simple → Delete stack"
+            echo "If delete fails, manually remove stuck resources (see Note/cloud-start.html)"
+            aws cloudformation describe-stack-events \
+              --region "${AWS_REGION}" \
+              --stack-name "${STACK_NAME}" \
+              --max-items 15 \
+              --query 'StackEvents[?ResourceStatus==`CREATE_FAILED` || ResourceStatus==`DELETE_FAILED`].[LogicalResourceId,ResourceStatusReason]' \
+              --output table || true
             exit 1
           fi
           set -e
