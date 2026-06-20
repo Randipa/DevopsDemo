@@ -23,6 +23,19 @@ BASE_ECR_REPO="devops-demo"
 IMAGE_TAG="${IMAGE_TAG:-dev-latest}"
 
 echo "==> Deploying ${DEPLOY_ENV} (${STACK_NAME}) to ${REGION}..."
+
+if aws ecr describe-repositories \
+  --region "${REGION}" \
+  --repository-names "${BASE_ECR_REPO}" >/dev/null 2>&1; then
+  echo "ECR repository ${BASE_ECR_REPO} exists."
+else
+  echo "Creating ECR repository ${BASE_ECR_REPO}..."
+  aws ecr create-repository \
+    --region "${REGION}" \
+    --repository-name "${BASE_ECR_REPO}" \
+    --image-scanning-configuration scanOnPush=true
+fi
+
 aws cloudformation deploy \
   --region "${REGION}" \
   --template-file infra/cloudformation-ecs-simple.yaml \

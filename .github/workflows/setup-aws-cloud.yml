@@ -8,7 +8,31 @@ env:
   BASE_ECR_REPO: devops-demo
 
 jobs:
+  ensure-ecr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure shared ECR repository
+        run: |
+          if aws ecr describe-repositories \
+            --region "${AWS_REGION}" \
+            --repository-names "${BASE_ECR_REPO}" >/dev/null 2>&1; then
+            echo "ECR repository ${BASE_ECR_REPO} already exists."
+          else
+            aws ecr create-repository \
+              --region "${AWS_REGION}" \
+              --repository-name "${BASE_ECR_REPO}" \
+              --image-scanning-configuration scanOnPush=true
+          fi
+
   setup:
+    needs: ensure-ecr
     runs-on: ubuntu-latest
     strategy:
       matrix:

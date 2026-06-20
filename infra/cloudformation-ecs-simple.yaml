@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ECS Fargate environment stack - ECR (dev only) + ALB + ECS per environment
+Description: ECS Fargate environment stack - ALB + ECS per environment (shared ECR created outside CFN)
 
 Parameters:
   AppName:
@@ -16,7 +16,7 @@ Parameters:
   BaseECRRepo:
     Type: String
     Default: devops-demo
-    Description: Shared ECR repository name (created in dev stack only)
+    Description: Shared ECR repository name (created by deploy workflow if missing)
 
 Mappings:
   EnvConfig:
@@ -44,9 +44,6 @@ Mappings:
       Subnet2Cidr: 10.23.2.0/24
       NodeEnv: production
       DeployEnv: production
-
-Conditions:
-  CreateECR: !Equals [!Ref Environment, dev]
 
 Resources:
   DevVPC:
@@ -110,14 +107,6 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
-
-  ECRRepository:
-    Type: AWS::ECR::Repository
-    Condition: CreateECR
-    Properties:
-      RepositoryName: !Ref BaseECRRepo
-      ImageScanningConfiguration:
-        ScanOnPush: true
 
   LogGroup:
     Type: AWS::Logs::LogGroup

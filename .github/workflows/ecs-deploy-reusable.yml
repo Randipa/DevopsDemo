@@ -47,6 +47,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Ensure shared ECR repository
+        run: |
+          if aws ecr describe-repositories \
+            --region "${AWS_REGION}" \
+            --repository-names "${BASE_ECR_REPO}" >/dev/null 2>&1; then
+            echo "ECR repository ${BASE_ECR_REPO} already exists (OK)."
+          else
+            echo "Creating ECR repository ${BASE_ECR_REPO}..."
+            aws ecr create-repository \
+              --region "${AWS_REGION}" \
+              --repository-name "${BASE_ECR_REPO}" \
+              --image-scanning-configuration scanOnPush=true
+          fi
+
       - name: Ensure AWS infrastructure
         run: |
           set +e
@@ -57,7 +71,8 @@ jobs:
             --output text 2>/dev/null)
           if [[ "${STATUS}" == "ROLLBACK_COMPLETE" ]] || [[ "${STATUS}" == "ROLLBACK_FAILED" ]] || [[ "${STATUS}" == "CREATE_FAILED" ]]; then
             echo "Stack ${STACK_NAME} is in failed state (${STATUS})."
-            echo "Delete it in AWS Console → CloudFormation, then re-run."
+            echo "AWS Console → CloudFormation → delete ${STACK_NAME}, then re-run."
+            echo "If you see ResourceExistenceCheck errors, delete old stack devops-ecs-simple first."
             exit 1
           fi
           set -e
