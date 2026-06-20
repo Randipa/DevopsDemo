@@ -5,7 +5,7 @@
 | Layer | Technology |
 |-------|------------|
 | App | Node.js + Express + `/metrics` |
-| CI/CD | GitHub Actions |
+| CI/CD | GitHub Actions (AWS deploy) + Jenkins (local practice) |
 | Container | Docker |
 | AWS deploy | ECS Fargate + ECR + ALB |
 | Logs | CloudWatch (`/ecs/devops-demo`) |
@@ -28,6 +28,18 @@ npm install && npm test && npm start
 docker compose up -d --build
 ./scripts/validate-deployment.sh http://localhost:3000
 ```
+
+## Jenkins (local CI — optional)
+
+```bash
+cd jenkins && docker compose -f docker-compose.jenkins.yml up -d --build
+# UI: http://localhost:8080
+# Blue Ocean: http://localhost:8080/blue
+```
+
+Create job: **New Item → Pipeline → SCM Git →** repo URL → Script Path: `Jenkinsfile` → **Build Now**
+
+AWS deploy stays on **GitHub Actions** (push to `main`). Jenkins runs build, test, and Docker locally.
 
 ## AWS Deploy (automatic)
 
@@ -57,6 +69,8 @@ Delete AWS stack:
 │   ├── deploy-ecs.yml          # Auto deploy on push to main
 │   ├── setup-aws-cloud.yml     # One-time ECS + ALB setup
 │   └── delete-aws-cloud.yml    # Tear down AWS stack
+├── Jenkinsfile                 # Local Jenkins pipeline (no k8s deploy)
+├── jenkins/docker-compose.jenkins.yml
 ├── infra/cloudformation-ecs-simple.yaml
 ├── ecs/task-definition.json
 ├── scripts/
