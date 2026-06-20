@@ -97,7 +97,6 @@ Delete AWS stack:
 ├── jenkins/docker-compose.jenkins.yml
 ├── monitoring/                 # Prometheus + Grafana (local)
 ├── infra/cloudformation-ecs-simple.yaml
-├── ecs/task-definition.json
 ├── scripts/
 │   ├── deploy-ecs-env.sh
 │   ├── delete-ecs-env.sh

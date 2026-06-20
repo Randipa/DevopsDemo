@@ -38,7 +38,7 @@ jobs:
           if [[ "${STATUS}" == "ROLLBACK_COMPLETE" ]] || [[ "${STATUS}" == "ROLLBACK_FAILED" ]] || [[ "${STATUS}" == "CREATE_FAILED" ]]; then
             echo "Stack in failed state (${STATUS})."
             echo "AWS Console → CloudFormation → devops-ecs-simple → Delete stack"
-            echo "If delete fails, manually remove stuck resources (see Note/cloud-start.html)"
+            echo "If delete fails, manually remove stuck resources (see Note/industry.html)"
             aws cloudformation describe-stack-events \
               --region "${AWS_REGION}" \
               --stack-name "${STACK_NAME}" \
