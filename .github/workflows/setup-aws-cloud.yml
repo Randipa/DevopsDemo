@@ -1,20 +1,31 @@
-name: Setup AWS Cloud (one-time)
+name: Setup All Environments (Infra)
 
 on:
   workflow_dispatch:
 
 env:
   AWS_REGION: eu-north-1
-  STACK_NAME: devops-ecs-simple
-  APP_NAME: devops-demo
-  ECR_REPOSITORY: devops-demo
-  ECS_CLUSTER: devops-demo-cluster
-  ECS_SERVICE: devops-demo-service
-  CONTAINER_NAME: app
+  BASE_ECR_REPO: devops-demo
 
 jobs:
-  setup-cloud:
+  setup:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - env_key: dev
+            github_environment: development
+          - env_key: test
+            github_environment: testing
+          - env_key: stage
+            github_environment: stage
+          - env_key: prod
+            github_environment: production
+    environment: ${{ matrix.github_environment }}
+    env:
+      APP_NAME: devops-demo-${{ matrix.env_key }}
+      STACK_NAME: devops-ecs-${{ matrix.env_key }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,91 +36,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy CloudFormation stack (VPC + ECR + ECS + ALB)
+      - name: Deploy CloudFormation stack
         run: |
-          STATUS=$(aws cloudformation describe-stacks \
-            --region "${AWS_REGION}" \
-            --stack-name "${STACK_NAME}" \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || echo "NONE")
-          if [[ "${STATUS}" == "ROLLBACK_COMPLETE" ]]; then
-            echo "Delete failed stack ${STACK_NAME} in AWS Console first."
-            exit 1
-          fi
           aws cloudformation deploy \
             --region "${AWS_REGION}" \
             --template-file infra/cloudformation-ecs-simple.yaml \
             --stack-name "${STACK_NAME}" \
-            --parameter-overrides AppName="${APP_NAME}" \
+            --parameter-overrides \
+              AppName="${APP_NAME}" \
+              Environment="${{ matrix.env_key }}" \
+              BaseECRRepo="${BASE_ECR_REPO}" \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
       - name: Show stack outputs
         run: |
+          echo "## ${{ matrix.github_environment }}" >> "$GITHUB_STEP_SUMMARY"
           aws cloudformation describe-stacks \
             --region "${AWS_REGION}" \
             --stack-name "${STACK_NAME}" \
             --query 'Stacks[0].Outputs' \
-            --output table
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Test, build, and push first image
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          npm ci
-          npm test
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Download task definition
-        run: |
-          aws ecs describe-task-definition \
-            --task-definition "${APP_NAME}" \
-            --query taskDefinition > task-def.json
-
-      - name: Render task definition with new image
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-def.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: false
-
-      - name: Start ECS service (scale to 1 task)
-        run: |
-          aws ecs update-service \
-            --region "${AWS_REGION}" \
-            --cluster "${ECS_CLUSTER}" \
-            --service "${ECS_SERVICE}" \
-            --desired-count 1 \
-            --force-new-deployment
-          aws ecs wait services-stable \
-            --region "${AWS_REGION}" \
-            --cluster "${ECS_CLUSTER}" \
-            --services "${ECS_SERVICE}"
-
-      - name: Print app URL
-        run: |
-          ALB=$(aws cloudformation describe-stacks \
-            --region "${AWS_REGION}" \
-            --stack-name "${STACK_NAME}" \
-            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
-            --output text)
-          echo "App URL: http://${ALB}/health"
+            --output table >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,14 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/ecs-deploy-reusable.yml
+    with:
+      github_environment: development
+      env_key: dev
+      build_image: true
+    secrets: inherit

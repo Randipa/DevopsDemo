@@ -1,0 +1,57 @@
+name: Promote to Environment (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment (manual button)
+        required: true
+        type: choice
+        options:
+          - testing
+          - stage
+          - production
+      image_tag:
+        description: ECR image tag to deploy (default = last dev build)
+        required: false
+        default: dev-latest
+        type: string
+
+jobs:
+  map-env:
+    runs-on: ubuntu-latest
+    outputs:
+      env_key: ${{ steps.map.outputs.env_key }}
+      github_environment: ${{ steps.map.outputs.github_environment }}
+    steps:
+      - name: Map environment
+        id: map
+        run: |
+          case "${{ inputs.environment }}" in
+            testing)
+              echo "env_key=test" >> "$GITHUB_OUTPUT"
+              echo "github_environment=testing" >> "$GITHUB_OUTPUT"
+              ;;
+            stage)
+              echo "env_key=stage" >> "$GITHUB_OUTPUT"
+              echo "github_environment=stage" >> "$GITHUB_OUTPUT"
+              ;;
+            production)
+              echo "env_key=prod" >> "$GITHUB_OUTPUT"
+              echo "github_environment=production" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unknown environment: ${{ inputs.environment }}"
+              exit 1
+              ;;
+          esac
+
+  deploy:
+    needs: map-env
+    uses: ./.github/workflows/ecs-deploy-reusable.yml
+    with:
+      github_environment: ${{ needs.map-env.outputs.github_environment }}
+      env_key: ${{ needs.map-env.outputs.env_key }}
+      build_image: false
+      image_tag: ${{ inputs.image_tag }}
+    secrets: inherit

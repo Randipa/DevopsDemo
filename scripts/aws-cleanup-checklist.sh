@@ -5,17 +5,17 @@ set -euo pipefail
 cat <<'EOF'
 AWS cleanup checklist (eu-north-1):
 
-1) CloudFormation → Stacks
-   - devops-ecs-simple     (current ECS setup) → Delete when done learning
-   - devops-dev-env        (OLD — delete if still exists from previous k3s setup)
+1) CloudFormation → Stacks (delete when done)
+   - devops-ecs-dev
+   - devops-ecs-test
+   - devops-ecs-stage
+   - devops-ecs-prod
+   - devops-ecs-simple      (legacy — delete if exists)
+   - devops-dev-env         (old k3s — delete if exists)
 
-2) EC2 → Instances
-   - Any devops-k3s-node   → must be Terminated (old setup only)
+2) ECR → devops-demo repository (shared image store)
 
-3) ECR → devops-demo repository (removed with ECS stack delete)
+3) CloudWatch → Log groups → /ecs/devops-demo-*
 
-4) CloudWatch → Log groups → /ecs/devops-demo (optional delete)
-
-GitHub: Actions → "Delete AWS Cloud Stack" workflow deletes devops-ecs-simple
-and attempts devops-dev-env if present.
+GitHub: Actions → "Delete AWS Cloud Stacks" removes all environment stacks.
 EOF

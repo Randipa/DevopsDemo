@@ -14,6 +14,7 @@ const httpRequestCounter = new client.Counter({
 const PORT = process.env.PORT || 3000;
 const APP_VERSION = process.env.APP_VERSION || '1.0.0';
 const ENVIRONMENT = process.env.NODE_ENV || 'development';
+const DEPLOY_ENV = process.env.DEPLOY_ENV || ENVIRONMENT;
 
 app.use(express.json());
 
@@ -34,6 +35,7 @@ app.get('/health', (_req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     environment: ENVIRONMENT,
+    deployEnv: DEPLOY_ENV,
     version: APP_VERSION
   });
 });
@@ -43,6 +45,7 @@ app.get('/api/info', (_req, res) => {
     name: 'DevOps Demo',
     version: APP_VERSION,
     environment: ENVIRONMENT,
+    deployEnv: DEPLOY_ENV,
     nodeVersion: process.version
   });
 });

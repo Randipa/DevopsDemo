@@ -1,28 +1,72 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Simple production-style deploy - ECR + ECS Fargate + ALB (no Kubernetes)
+Description: ECS Fargate environment stack - ECR (dev only) + ALB + ECS per environment
 
 Parameters:
   AppName:
     Type: String
+    Default: devops-demo-dev
+  Environment:
+    Type: String
+    AllowedValues:
+      - dev
+      - test
+      - stage
+      - prod
+    Default: dev
+  BaseECRRepo:
+    Type: String
     Default: devops-demo
+    Description: Shared ECR repository name (created in dev stack only)
+
+Mappings:
+  EnvConfig:
+    dev:
+      VpcCidr: 10.20.0.0/16
+      Subnet1Cidr: 10.20.1.0/24
+      Subnet2Cidr: 10.20.2.0/24
+      NodeEnv: development
+      DeployEnv: development
+    test:
+      VpcCidr: 10.21.0.0/16
+      Subnet1Cidr: 10.21.1.0/24
+      Subnet2Cidr: 10.21.2.0/24
+      NodeEnv: test
+      DeployEnv: testing
+    stage:
+      VpcCidr: 10.22.0.0/16
+      Subnet1Cidr: 10.22.1.0/24
+      Subnet2Cidr: 10.22.2.0/24
+      NodeEnv: staging
+      DeployEnv: stage
+    prod:
+      VpcCidr: 10.23.0.0/16
+      Subnet1Cidr: 10.23.1.0/24
+      Subnet2Cidr: 10.23.2.0/24
+      NodeEnv: production
+      DeployEnv: production
+
+Conditions:
+  CreateECR: !Equals [!Ref Environment, dev]
 
 Resources:
   DevVPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.20.0.0/16
+      CidrBlock: !FindInMap [EnvConfig, !Ref Environment, VpcCidr]
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
         - Key: Name
           Value: !Sub '${AppName}-vpc'
+        - Key: Environment
+          Value: !FindInMap [EnvConfig, !Ref Environment, DeployEnv]
 
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref DevVPC
       AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: 10.20.1.0/24
+      CidrBlock: !FindInMap [EnvConfig, !Ref Environment, Subnet1Cidr]
       MapPublicIpOnLaunch: true
 
   PublicSubnet2:
@@ -30,7 +74,7 @@ Resources:
     Properties:
       VpcId: !Ref DevVPC
       AvailabilityZone: !Select [1, !GetAZs '']
-      CidrBlock: 10.20.2.0/24
+      CidrBlock: !FindInMap [EnvConfig, !Ref Environment, Subnet2Cidr]
       MapPublicIpOnLaunch: true
 
   InternetGateway:
@@ -69,8 +113,9 @@ Resources:
 
   ECRRepository:
     Type: AWS::ECR::Repository
+    Condition: CreateECR
     Properties:
-      RepositoryName: !Ref AppName
+      RepositoryName: !Ref BaseECRRepo
       ImageScanningConfiguration:
         ScanOnPush: true
 
@@ -164,6 +209,9 @@ Resources:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Sub '${AppName}-cluster'
+      Tags:
+        - Key: Environment
+          Value: !FindInMap [EnvConfig, !Ref Environment, DeployEnv]
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -178,13 +226,15 @@ Resources:
       TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: app
-          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AppName}:placeholder'
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${BaseECRRepo}:placeholder'
           Essential: true
           PortMappings:
             - ContainerPort: 3000
           Environment:
             - Name: NODE_ENV
-              Value: production
+              Value: !FindInMap [EnvConfig, !Ref Environment, NodeEnv]
+            - Name: DEPLOY_ENV
+              Value: !FindInMap [EnvConfig, !Ref Environment, DeployEnv]
             - Name: PORT
               Value: '3000'
           LogConfiguration:
@@ -224,14 +274,25 @@ Resources:
         - ContainerName: app
           ContainerPort: 3000
           TargetGroupArn: !Ref TargetGroup
+      Tags:
+        - Key: Environment
+          Value: !FindInMap [EnvConfig, !Ref Environment, DeployEnv]
 
 Outputs:
+  Environment:
+    Value: !FindInMap [EnvConfig, !Ref Environment, DeployEnv]
   LoadBalancerDNS:
     Description: Public app URL (HTTP)
     Value: !GetAtt ApplicationLoadBalancer.DNSName
+  AppHealthUrl:
+    Description: Health check URL
+    Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}/health'
+  AppInfoUrl:
+    Description: App info URL (shows environment name)
+    Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}/api/info'
   ECRRepositoryUri:
-    Description: Docker push target
-    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AppName}'
+    Description: Shared Docker push target
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${BaseECRRepo}'
   ECSClusterName:
     Value: !Ref ECSCluster
   ECSServiceName:
