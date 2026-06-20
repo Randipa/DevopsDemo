@@ -8,7 +8,7 @@
 | CI/CD | GitHub Actions (AWS deploy) + Jenkins (local practice) |
 | Container | Docker |
 | AWS deploy | ECS Fargate + ECR + ALB |
-| Logs | CloudWatch (`/ecs/devops-demo`) |
+| Logs | CloudWatch (`/ecs/devops-demo`) on AWS; Prometheus + Grafana locally |
 
 **Sinhala guide:** `../Note/industry.html` (open with `cd ../Note && python3 -m http.server 5500`)
 
@@ -41,6 +41,30 @@ Create job: **New Item → Pipeline → SCM Git →** repo URL → Script Path: 
 
 AWS deploy stays on **GitHub Actions** (push to `main`). Jenkins runs build, test, and Docker locally.
 
+## Monitoring (local — Grafana + Prometheus)
+
+```bash
+chmod +x scripts/start-monitoring.sh
+./scripts/start-monitoring.sh
+```
+
+| Service | URL | Login |
+|---------|-----|-------|
+| Grafana | http://localhost:3001 | admin / admin |
+| Prometheus | http://localhost:9090 | — |
+| App metrics | http://localhost:3000/metrics | — |
+
+**Dashboard (graphs):** http://localhost:3001/d/devops-demo-overview/devops-demo-overview
+
+Generate traffic: `curl http://localhost:3000/api/echo?message=hi`
+
+Stop:
+
+```bash
+cd monitoring && docker compose -f docker-compose.monitoring.yml down
+docker compose -f docker-compose.app.yml down
+```
+
 ## AWS Deploy (automatic)
 
 1. GitHub repo → **Settings → Secrets** → `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
@@ -71,12 +95,14 @@ Delete AWS stack:
 │   └── delete-aws-cloud.yml    # Tear down AWS stack
 ├── Jenkinsfile                 # Local Jenkins pipeline (no k8s deploy)
 ├── jenkins/docker-compose.jenkins.yml
+├── monitoring/                 # Prometheus + Grafana (local)
 ├── infra/cloudformation-ecs-simple.yaml
 ├── ecs/task-definition.json
 ├── scripts/
 │   ├── deploy-ecs-env.sh
 │   ├── delete-ecs-env.sh
 │   ├── validate-deployment.sh
+│   ├── start-monitoring.sh
 │   └── cleanup-local.sh
 ├── docs/IAM-GITHUB-PERMISSIONS.md
 └── src/server.js
