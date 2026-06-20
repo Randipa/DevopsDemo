@@ -1,32 +1,21 @@
 #!/usr/bin/env bash
-# Print AWS Console cleanup checklist (old k3s + new ECS stacks)
+# Print AWS Console cleanup checklist
 set -euo pipefail
 
 cat <<'EOF'
-========================================
-AWS CLEANUP CHECKLIST (Console)
-Region: eu-north-1 (Stockholm)
-========================================
+AWS cleanup checklist (eu-north-1):
 
-1. EC2 → Instances
-   - devops-k3s-node → must be "Terminated" (not Shutting-down)
-   - If still running: Instance state → Terminate
+1) CloudFormation → Stacks
+   - devops-ecs-simple     (current ECS setup) → Delete when done learning
+   - devops-dev-env        (OLD — delete if still exists from previous k3s setup)
 
-2. CloudFormation → Stacks → DELETE these if exist:
-   - devops-dev-env      (OLD k3s setup)
-   - devops-ecs-simple   (NEW ECS setup - only if starting over)
+2) EC2 → Instances
+   - Any devops-k3s-node   → must be Terminated (old setup only)
 
-3. Wait for Status: DELETE_COMPLETE (5-15 min)
+3) ECR → devops-demo repository (removed with ECS stack delete)
 
-4. Verify empty:
-   - EC2 → Load Balancers
-   - EC2 → Target Groups
-   - ECS → Clusters
-   - VPC → (optional) leftover devops VPCs
+4) CloudWatch → Log groups → /ecs/devops-demo (optional delete)
 
-5. Billing → check no running resources
-
-OR use GitHub Actions workflow: "Delete AWS Cloud Stack" (after secrets set)
-
-Local PC: already cleaned via ./scripts/cleanup-local.sh
+GitHub: Actions → "Delete AWS Cloud Stack" workflow deletes devops-ecs-simple
+and attempts devops-dev-env if present.
 EOF
