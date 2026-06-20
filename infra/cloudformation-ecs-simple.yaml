@@ -139,7 +139,6 @@ Resources:
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${AppName}-ecs-execution'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -153,7 +152,6 @@ Resources:
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${AppName}-ecs-task'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -180,7 +178,7 @@ Resources:
       TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: app
-          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AppName}:latest'
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AppName}:placeholder'
           Essential: true
           PortMappings:
             - ContainerPort: 3000
@@ -212,7 +210,7 @@ Resources:
       Cluster: !Ref ECSCluster
       TaskDefinition: !Ref TaskDefinition
       LaunchType: FARGATE
-      DesiredCount: 1
+      DesiredCount: 0
       HealthCheckGracePeriodSeconds: 120
       NetworkConfiguration:
         AwsvpcConfiguration:

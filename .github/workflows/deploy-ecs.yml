@@ -27,7 +27,20 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Ensure AWS infrastructure (ECR + ECS + ALB)
+        id: infra
         run: |
+          set +e
+          STATUS=$(aws cloudformation describe-stacks \
+            --region "${AWS_REGION}" \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null)
+          if [[ "${STATUS}" == "ROLLBACK_COMPLETE" ]] || [[ "${STATUS}" == "CREATE_FAILED" ]]; then
+            echo "Stack in failed state (${STATUS}). Delete it in AWS Console first:"
+            echo "  CloudFormation → ${STACK_NAME} → Delete"
+            exit 1
+          fi
+          set -e
           aws cloudformation deploy \
             --region "${AWS_REGION}" \
             --template-file infra/cloudformation-ecs-simple.yaml \
@@ -79,7 +92,20 @@ jobs:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+          wait-for-service-stability: false
+
+      - name: Start ECS service (scale to 1 task)
+        run: |
+          aws ecs update-service \
+            --region "${AWS_REGION}" \
+            --cluster "${ECS_CLUSTER}" \
+            --service "${ECS_SERVICE}" \
+            --desired-count 1 \
+            --force-new-deployment
+          aws ecs wait services-stable \
+            --region "${AWS_REGION}" \
+            --cluster "${ECS_CLUSTER}" \
+            --services "${ECS_SERVICE}"
 
       - name: Print app URL
         run: |
