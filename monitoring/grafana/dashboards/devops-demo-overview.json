@@ -6,9 +6,11 @@
     {
       "title": "HTTP Requests Total",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "sum(rate(http_requests_total[5m])) by (route, status)",
           "legendFormat": "{{route}} {{status}}"
         }
@@ -17,9 +19,11 @@
     {
       "title": "Process CPU (seconds)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "rate(process_cpu_seconds_total[5m])",
           "legendFormat": "cpu"
         }
@@ -28,9 +32,11 @@
     {
       "title": "Heap Memory (bytes)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "process_resident_memory_bytes",
           "legendFormat": "rss"
         }
