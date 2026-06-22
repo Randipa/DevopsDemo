@@ -68,6 +68,13 @@ app.get('/api/name', (req, res) => {
   });
 });
 
+app.get('/api/compute', (req, res) => {
+  res.json({
+    message: req.query.message || 'Hello from DevOps demo!',
+    computedAt: new Date().toISOString()
+  });
+});
+
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
