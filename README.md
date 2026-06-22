@@ -1,6 +1,6 @@
 # DevOps Demo — Industry Pipeline
 
-**GitHub → GitHub Actions → Amazon ECR → ECS Fargate → ALB (4 environments)**
+**GitHub → GitHub Actions → Amazon ECR → ECS Fargate → ALB **
 
 | Layer | Technology |
 |-------|------------|
@@ -10,7 +10,6 @@
 | AWS deploy | ECS Fargate + ECR + ALB × 4 envs |
 | Logs | CloudWatch (`/ecs/devops-demo-*`) |
 
-**Sinhala guide:** `../Note/industry.html`
 
 ---
 
@@ -100,3 +99,7 @@ IMAGE_TAG=dev-latest ./scripts/deploy-ecs-env.sh test   # promote to testing
 | `GET /api/info` | App info — shows which environment |
 | `GET /metrics` | Prometheus metrics |
 | `GET /api/echo?message=hi` | Demo API |
+
+## Trafic Flow
+<img width="1147" height="463" alt="image" src="https://github.com/user-attachments/assets/ee8a1346-d5c2-4f07-86ed-0fe8ecc06ee0" />
+
